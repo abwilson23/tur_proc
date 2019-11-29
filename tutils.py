@@ -32,7 +32,7 @@ class BaseStateSystem:
 
     def plot_time_evolution(self, filename, n_steps=30):
         """
-        Creates a gif from the time evolution of a basic state syste.
+        Creates a gif from the time evolution of a basic state system.
         """
         self.initialise()
         fig, ax = self.initialise_figure()
