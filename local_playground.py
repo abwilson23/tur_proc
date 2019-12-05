@@ -35,16 +35,20 @@ def function_initialiser(shape,f1,f2):
 f1 = lambda x : eq_pt*(1 + pert_a(x))
 f2 = lambda x : eq_pt*(1 + pert_b(x))
 
+# constants used to define wavenumber
+m_vals = [7, 12, 23, 29]
+m = m_vals[0]
+
 # Perturbation from equilibrium
-def pert_a(x): return np.cos(14*np.pi*x/100)
-def pert_b(x): return np.cos(14*np.pi*x/100)
+def pert_a(x): return np.cos(m*2*np.pi*x/100)
+def pert_b(x): return np.cos(m*2*np.pi*x/100)
 
 # Reaction equations
 def Ra(a,b): return a - a ** 3 - b + alpha
 def Rb(a,b): return (a - b) * beta
 
 # Diffusion and reaction constants 
-Da, Db, alpha, beta = 1, 20.3, -0.005, 10
+Da, Db, alpha, beta = 1, 100, -0.005, 10
 
 # Computing the equilibrium point of the system. 
 eq_pt = np.cbrt(alpha)
@@ -73,7 +77,7 @@ class OneDimensionalRDEquations(BaseStateSystem):
     def initialise(self):
         self.t = 0
         self.a, self.b = function_initialiser(self.width,f1,f2)
-        
+
     def update(self):
         for _ in range(self.steps):
             self.t += self.dt
@@ -102,15 +106,18 @@ class OneDimensionalRDEquations(BaseStateSystem):
         ax.plot(self.a, color="r", label="A")
         ax.plot(self.b, color="b", label="B")
         ax.legend()
-        ax.set_ylim(-1,1)
+        ax.set_ylim(-1, 1)
         ax.set_title("t = {:.2f}".format(self.t))
 
     def custom_draw(self, vals, title, filename):
         fig, ax = self.initialise_figure()
+        # accurate x-axis markers
+        x = np.linspace(0, self.steps*dt*len(vals), len(vals))
         ax.clear()
-        ax.plot(vals, color="r", label="A")
+        ax.plot(x, vals, color="r", label="a")
+        plt.xlabel('t')
         ax.legend()
-        ax.set_ylim(min(vals), max(vals))
+        ax.set_ylim(-3, 3)
         fig.savefig('plots/' + filename + '.png')
         plt.close()
     
@@ -136,14 +143,25 @@ class OneDimensionalRDEquations(BaseStateSystem):
         for _ in range(n_steps):
             orbit_a = np.append(orbit_a, self.get_val(pt))
             self.update()
+            
+        return orbit_a
 
-        # plotting the diffs
-        #diffs = [orbit_a[i+1] - orbit_a[i] for i in range(0, n_steps-1)]
-        #self.custom_draw(np.array(diffs), "diffs", "diffs")
-        
+    def plot_growth(self, pt, n_steps):
+        orbit_a = self.track_growth(pt, n_steps)
         title = "growth,t={0:.2f},n={1},pt={2}".format(self.t, n_steps, pt)
         filename = "growth_x={0:.1f}_n={1}".format(pt, n_steps)
         self.custom_draw(orbit_a, title, filename)
+
+    def approx_omega(self, growth):
+        return (np.log(np.abs( growth/eq_pt - 1) ))
+
+    def plot_growth_rate(self, pt, n_steps):
+        growth = self.track_growth(pt, n_steps)
+        growth_line = self.approx_omega(growth)
+
+        title = "growth_rate_t={0:.2f}_n={1}_pt={2}".format(self.t, n_steps, pt)
+        filename = "growth_x={0:.1f}_n={1}_m={2}".format(pt, n_steps, m)
+        self.custom_draw(growth_line, title, filename)
 
     def get_val(self, pt):
         assert 0 <= pt < self.width, "Point is not in the domain"
@@ -157,8 +175,8 @@ class OneDimensionalRDEquations(BaseStateSystem):
         a_vals = [self.a[j] for j in x_vals]
         return np.interp(pt, x_vals, a_vals)
 
-
 # Local playground #
+
 width = 100
 dx = 1
 dt = 0.001
